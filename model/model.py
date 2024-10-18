@@ -104,7 +104,7 @@ class TDEEDModel(BaseRGBModel):
         def forward(self, x, y = None, inference=False):
             
             x = self.normalize(x) #Normalize to 0-1
-            batch_size, true_clip_len, channels, height, width = x.shape
+            batch_size, clip_len, channels, height, width = x.shape
 
             if not inference:
                 x.view(-1, channels, height, width)
@@ -112,7 +112,7 @@ class TDEEDModel(BaseRGBModel):
                     height = self.croping
                     width = self.croping
                 x = self.cropT(x) #same crop for all frames
-                x = x.view(batch_size, true_clip_len, channels, height, width)
+                x = x.view(batch_size, clip_len, channels, height, width)
                 x = self.augment(x) #augmentation per-batch
                 x = self.standarize(x) #standarization imagenet stats
 
@@ -122,17 +122,18 @@ class TDEEDModel(BaseRGBModel):
                     height = self.croping
                     width = self.croping
                 x = self.cropI(x) #same center crop for all frames
-                x = x.view(batch_size, true_clip_len, channels, height, width)
+                x = x.view(batch_size, clip_len, channels, height, width)
                 x = self.standarize(x)
-
-            clip_len = true_clip_len
-                        
+            
+            #Extract features
             im_feat = self._features(
                 x.view(-1, channels, height, width)
             ).reshape(batch_size, clip_len, self._d)
 
+            #Temporal encoding
             im_feat = im_feat + self.temp_enc.expand(batch_size, -1, -1)
 
+            #Temporal module (SGP-Mixer)
             if self._temp_arch == 'ed_sgp_mixer':
                 output_data = {}
                 im_feat = self._temp_fine(im_feat)

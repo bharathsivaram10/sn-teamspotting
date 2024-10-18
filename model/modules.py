@@ -97,12 +97,11 @@ class SGPBlock(nn.Module):
             n_out=None,  # output dimension, if None, set to input dim
             n_hidden=None,  # hidden dim for mlp
             act_layer=nn.GELU,  # nonlinear activation used after conv, default ReLU,
-            init_conv_vars=0.1,  # init gaussian variance for the weight
-            mode='normal'
+            init_conv_vars=0.1  # init gaussian variance for the weight
     ):
         super().__init__()
         # must use odd sized kernel
-        # assert (kernel_size % 2 == 1) and (kernel_size > 1)
+        assert (kernel_size % 2 == 1) and (kernel_size > 1)
         # padding = kernel_size // 2
 
         self.kernel_size = kernel_size
@@ -142,8 +141,6 @@ class SGPBlock(nn.Module):
         self.sigm = nn.Sigmoid()
         self.reset_params(init_conv_vars=init_conv_vars)
 
-        self.mode = mode
-
     def reset_params(self, init_conv_vars=0):
         torch.nn.init.normal_(self.psi.weight, 0, init_conv_vars)
         torch.nn.init.normal_(self.fc.weight, 0, init_conv_vars)
@@ -166,20 +163,7 @@ class SGPBlock(nn.Module):
         convw = self.convw(out)
         convkw = self.convkw(out)
         phi = torch.relu(self.global_fc(out.mean(dim=-1, keepdim=True)))
-        if self.mode == 'normal':
-            out = fc * phi + (convw + convkw) * psi + out #fc * phi instant level / (convw + convkw) * psi window level
-        elif self.mode == 'sigm1':
-            out = fc * phi + self.sigm(convw + convkw) * psi + out
-        elif self.mode == 'sigm2':
-            out = fc * self.sigm(phi) + self.sigm(convw + convkw) * psi + out
-        elif self.mode == 'sigm3':
-            out = self.sigm(fc) * phi + (convw + convkw) * self.sigm(psi) + out
-        #out = fc * phi + out #only instant level
-        #out = (convw + convkw) * psi + out #only window level
-        #out = fc * phi + self.sigm(convw + convkw) * psi + out # sigmoid down branch window-level
-        #out = fc * self.sigm(phi) + self.sigm(convw + convkw) * psi + out # sigmoid down branch window-level + up branch instant-level
-        #out = self.sigm(fc) * phi + (convw + convkw) * self.sigm(psi) + out # sigmoid up branch window-level + down branch instant-level
-
+        out = fc * phi + (convw + convkw) * psi + out #fc * phi instant level / (convw + convkw) * psi window level
 
         out = x + out
         # FFN

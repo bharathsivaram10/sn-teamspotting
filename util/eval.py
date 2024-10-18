@@ -9,9 +9,7 @@ from torch.utils.data import DataLoader
 from collections import defaultdict
 import copy
 import os
-import zipfile
 import json
-import glob
 
 #Local imports
 # from util.score import compute_mAPs
@@ -242,10 +240,10 @@ def mAPevaluateTest(model, split, dataset, classes, printed=True, event_team = F
         labels = json.load(open(os.path.join(labels_path, game, label_file)))
         num_classes = len(classes)
         # convert labels to vector
-        labels = label2vector(labels, num_classes=num_classes, version=2, EVENT_DICTIONARY=classes, framerate=FPS_SN, event_team = event_team)
+        labels = label2vector(labels, num_classes=num_classes, EVENT_DICTIONARY=classes, framerate=FPS_SN, event_team = event_team)
         
         predictions = json.load(open(os.path.join(pred_file, game, 'results_spotting.json')))
-        predictions = predictions2vector(predictions, num_classes=num_classes, version=2, EVENT_DICTIONARY=classes, framerate=FPS_SN, event_team = event_team)
+        predictions = predictions2vector(predictions, num_classes=num_classes, EVENT_DICTIONARY=classes, framerate=FPS_SN, event_team = event_team)
 
         targets_numpy.append(labels)
         detections_numpy.append(predictions)
@@ -279,10 +277,10 @@ def mAPevaluateTest(model, split, dataset, classes, printed=True, event_team = F
             labels = json.load(open(os.path.join(labels_path, game, label_file)))
             num_classes = len(aux_classes)
             # convert labels to vector
-            labels = label2vector(labels, num_classes=num_classes, version=2, EVENT_DICTIONARY=aux_classes, framerate=FPS_SN, event_team = False)
+            labels = label2vector(labels, num_classes=num_classes, EVENT_DICTIONARY=aux_classes, framerate=FPS_SN, event_team = False)
 
             predictions = json.load(open(os.path.join(pred_file, game, 'results_spotting.json')))
-            predictions = predictions2vector(predictions, num_classes=num_classes, version=2, EVENT_DICTIONARY=aux_classes, framerate=FPS_SN, event_team = False)
+            predictions = predictions2vector(predictions, num_classes=num_classes, EVENT_DICTIONARY=aux_classes, framerate=FPS_SN, event_team = False)
 
             targets_numpy.append(labels)
             detections_numpy.append(predictions)
@@ -380,7 +378,7 @@ def soft_non_maximum_supression(pred, window, threshold = 0.01):
         new_pred.append(new_video_pred)
     return new_pred
 
-def label2vector(labels, num_classes=17, framerate=2, version=2, EVENT_DICTIONARY={}, event_team = False):
+def label2vector(labels, num_classes=17, framerate=2, EVENT_DICTIONARY={}, event_team = False):
 
     vector_size = 120*60*framerate
 
@@ -420,7 +418,7 @@ def label2vector(labels, num_classes=17, framerate=2, version=2, EVENT_DICTIONAR
 
     return label_half1
 
-def predictions2vector(predictions, num_classes=17, version=2, framerate=2, EVENT_DICTIONARY={}, event_team = False):
+def predictions2vector(predictions, num_classes=17, framerate=2, EVENT_DICTIONARY={}, event_team = False):
 
 
     vector_size = 120*60*framerate

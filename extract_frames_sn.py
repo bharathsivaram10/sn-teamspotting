@@ -21,7 +21,7 @@ python extract_frames_sn.py --video_dir video_dir
 
 
 FRAME_CORRECT_THRESHOLD = 1000
-SPLIT = ['train', 'valid', 'test']
+SPLIT = ['train', 'valid']
 GT_RADI = 6 # 6 seconds around the ground-truth action (should be enough for clips of 8 seconds)
 SN_FPS = 25
 

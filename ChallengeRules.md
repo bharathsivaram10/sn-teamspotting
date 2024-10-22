@@ -21,7 +21,7 @@ Prizes will be announced soon, stay tuned!
  - An individual/team can compete on different tasks.
  - An individual associated with multiple teams (for a given task) or a team with multiple accounts will be disqualified.
  - On both tasks, a particpant can only use the video stream as input (visual and/or audio).
- - A particpant is allowed to extract its own visual/audio features with any pre-trained model.
+ - Participants are allowed to use their own models to extract visual/audio features, provided that these models are trained on public datasets. A reference to the datasets used is required.
 
 ## How to win / What is the prize?
 

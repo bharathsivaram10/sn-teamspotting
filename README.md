@@ -29,25 +29,22 @@ To adapt T-DEED for predicting the team performing the action, we add an additio
 
 ### Steps for Using the Repository:
 
-1. **Download the datasets**:  
-   Download SoccerNet Action Spotting and SoccerNet Ball Action Spotting videos. You can follow the instructions from [here](https://www.soccer-net.org/data) for the former and download the latter dataset from [here](SoccerNet/SN-BAS-2024).
+1. **Download the datasets and labels**:
+   Follow instructions from the following [link](https://huggingface.co/datasets/SoccerNet/SN-BAS-2025/tree/main) to download SoccerNet Action Spotting and SoccerNet Ball action spotting videos and labels. If you have labels from previous versions of the challenge, make sure to update them as they now include team annotations for each action.
 
-2. **Download and unzip labels**:  
-   Download and unzip the SoccerNet Action Spotting and SoccerNet Ball Action Spotting labels from this [link] (add correct link). If you have labels from previous versions of the challenge, make sure to update them as they now include team annotations for each action.
-
-3. **Update label paths**:  
+2. **Update label paths**:  
    Modify the `labels_path.txt` files in [`/data/soccernet`](/data/soccernet/) and [`/data/soccernetball`](/data/soccernetball/) to point to the folders containing the labels for each dataset.
 
-4. **Extract frames**:  
+3. **Extract frames**:  
    Extract frames for both SoccerNet Action Spotting and SoccerNet Ball Action Spotting using the [`extract_frames_sn.py`](/extract_frames_sn.py) and [`extract_frames_snb.py`](/extract_frames_snb.py) scripts.
 
-5. **Update the config file**:  
+4. **Update the config file**:  
    Update the [config file](/config/SoccerNetBall/SoccerNetBall_baseline.json) to set the paths for frame directories (for both datasets), checkpoint and predictions saving locations, and where to store the processed dataset information. For details on the configuration parameters, refer to the corresponding [README](/config/SoccerNetBall/README.md).
 
-6. **Run initial training setup**:  
+5. **Run initial training setup**:  
    Execute the [`train_tdeed_bas.py`](/train_tdeed_bas.py) script, specifying the model name corresponding to the configuration file (`SoccerNetBall_baseline` in this case). For the first run, set the `store_mode` parameter in the configuration to "store". This will partition the untrimmed videos into clips and store information such as the starting frame and processed labels, enabling faster data loading during training.
 
-7. **Train the model**:  
+6. **Train the model**:  
    After the initial setup, run `train_tdeed_bas.py` again with `store_mode` set to "load" to train the model. The script will train on the `train` splits, use the `validation` splits for early stopping, evaluate on the `test` split, and generate predictions for the `challenge` split.
 
 ## Evaluation

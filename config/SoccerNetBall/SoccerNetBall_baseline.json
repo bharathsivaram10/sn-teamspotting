@@ -1,7 +1,6 @@
 {
     "frame_dir": "/path/to/soccernetball/frames",
     "save_dir": "/path/to/save",
-    "store_dir": "/path/to/store/soccernetball/clips",
     "store_mode": "store",
     "batch_size": 4,
     "clip_len": 100,
@@ -27,7 +26,6 @@
     "num_workers": 4,
     "joint_train": {
         "frame_dir": "/path/to/soccernet/frames",
-        "store_dir": "/path/to/store/soccernet/clips",
         "dataset": "soccernet",
         "num_classes": 17
     }

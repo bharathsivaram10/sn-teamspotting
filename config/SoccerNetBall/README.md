@@ -5,8 +5,7 @@
 Here we describe the different parameters set in each configuration file:
 
 - _frame_dir:_ Directory where frames are stored.
-- _save_dir:_ Directory to save processed dataset information (clips splits, labels of clips...). 
-- _store_dir:_ Directory to save model checkpoints, predictions, etc.
+- _save_dir:_ Directory to save model checkpoints, predictions, processed datasets...
 - _store_mode:_ `store` if it's the first time running the script to prepare and store dataset information, or `load` to load previously stored information.
 - _batch_size:_ Batch size.
 - _clip_len:_ Length of the clips in number of frames.
@@ -32,6 +31,5 @@ Here we describe the different parameters set in each configuration file:
 - _num_workers:_ Number of workers.
 - _joint_train:_ Additional dataset information for joint training (SoccerNet Action Spotting -soccernet- in our case).
     - _frame_dir:_ Directory where frames are stored (for additional dataset - snas).
-    - _store_dir:_ Directory to save processed dataset information (clip splits, labels of clips...) (for additional dataset - snas).
     - _dataset:_ Additional dataset used (`soccernet`).
     - _num_classes:_ Nº of classes of the additional dataset.

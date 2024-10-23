@@ -30,7 +30,7 @@ To adapt T-DEED for predicting the team performing the action, we add an additio
 ### Steps for Using the Repository:
 
 1. **Download the datasets and labels**:
-   Follow instructions from the following [link](https://huggingface.co/datasets/SoccerNet/SN-BAS-2025/tree/main) to download SoccerNet Action Spotting and SoccerNet Ball action spotting videos and labels. If you have labels from previous versions of the challenge, make sure to update them as they now include team annotations for each action.
+   Follow the instructions provided in this [link](https://huggingface.co/datasets/SoccerNet/SN-BAS-2025/tree/main) to download the SoccerNet Action Spotting and SoccerNet Ball Action Spotting datasets, including videos and labels. While the labels and SoccerNet Ball Action Spotting videos can be downloaded directly from the link, the instructions for downloading SoccerNet Action Spotting videos can be found on this [webpage](https://www.soccer-net.org/data). If you have labels from earlier versions of the challenge, ensure that you update them, as the new versions include team annotations for each action.
 
 2. **Update label paths**:  
    Modify the `labels_path.txt` files in [`/data/soccernet`](/data/soccernet/) and [`/data/soccernetball`](/data/soccernetball/) to point to the folders containing the labels for each dataset.
@@ -39,7 +39,7 @@ To adapt T-DEED for predicting the team performing the action, we add an additio
    Extract frames for both SoccerNet Action Spotting and SoccerNet Ball Action Spotting using the [`extract_frames_sn.py`](/extract_frames_sn.py) and [`extract_frames_snb.py`](/extract_frames_snb.py) scripts.
 
 4. **Update the config file**:  
-   Update the [config file](/config/SoccerNetBall/SoccerNetBall_baseline.json) to set the paths for frame directories (for both datasets), checkpoint and predictions saving locations, and where to store the processed dataset information. For details on the configuration parameters, refer to the corresponding [README](/config/SoccerNetBall/README.md).
+   Update the [config file](/config/SoccerNetBall/SoccerNetBall_baseline.json) to set the paths for frame directories (for both datasets), and checkpoint and predictions saving locations. For details on the configuration parameters, refer to the corresponding [README](/config/SoccerNetBall/README.md).
 
 5. **Run initial training setup**:  
    Execute the [`train_tdeed_bas.py`](/train_tdeed_bas.py) script, specifying the model name corresponding to the configuration file (`SoccerNetBall_baseline` in this case). For the first run, set the `store_mode` parameter in the configuration to "store". This will partition the untrimmed videos into clips and store information such as the starting frame and processed labels, enabling faster data loading during training.

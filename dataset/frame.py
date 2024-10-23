@@ -65,7 +65,6 @@ class ActionSpotDataset(Dataset):
             self._overlap = int((1-overlap) * clip_len)
         else:
             self._overlap = 1
-        assert self._overlap % self._stride == 0, 'Overlap must be divisible by stride'
         assert overlap >= 0 and overlap <= 1
         self._dataset_len = dataset_len
         assert dataset_len > 0

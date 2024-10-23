@@ -271,7 +271,7 @@ class TDEEDModel(BaseRGBModel):
                 label = label.flatten() if len(label.shape) == 2 \
                     else label.view(-1, label.shape[-1])
 
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast("cuda"):
                     predDict, y = self._model(frame, y = label, inference=inference)
 
                     pred = predDict['im_feat']
@@ -364,7 +364,7 @@ class TDEEDModel(BaseRGBModel):
 
         self._model.eval()
         with torch.no_grad():
-            with torch.cuda.amp.autocast() if use_amp else nullcontext():
+            with torch.amp.autocast("cuda") if use_amp else nullcontext():
                 predDict, _ = self._model(seq, inference=True)
 
             pred = predDict['im_feat']

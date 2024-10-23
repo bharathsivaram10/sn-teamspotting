@@ -44,7 +44,7 @@ def update_args(args, config):
     #Update arguments with config file
     args.frame_dir = config['frame_dir']
     args.save_dir = config['save_dir'] + '/' + args.model # + '-' + str(args.seed) -> in case multiple seeds
-    args.store_dir = config['store_dir']
+    args.store_dir = os.path.join(config['save_dir'], 'StoreClips', config['dataset']) #where to store clips information
     args.store_mode = config['store_mode']
     args.batch_size = config['batch_size']
     args.clip_len = config['clip_len']
@@ -70,9 +70,9 @@ def update_args(args, config):
     args.num_workers = config['num_workers']
     if 'joint_train' in config:
         args.joint_train = config['joint_train']
+        args.joint_train['store_dir'] = os.path.join(args.save_dir, 'StoreClips', args.joint_train['dataset'])
     else:
         args.joint_train = None
-
     return args
 
 def get_lr_scheduler(args, optimizer, num_steps_per_epoch):
@@ -110,6 +110,8 @@ def main(args):
 
     # initialize wandb
     wandb.login()
+    if not os.path.exists(args.save_dir + '/wandb_logs'):
+        os.makedirs(args.save_dir + '/wandb_logs', exist_ok=True)
     wandb.init(config = args, dir = args.save_dir + '/wandb_logs', project = 'TDEED-snbas2025', name = args.model + '-' + str(args.seed))
 
     # Get datasets train, validation (and validation for map -> Video dataset)

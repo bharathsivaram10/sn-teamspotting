@@ -341,9 +341,12 @@ class TDEEDModel(BaseRGBModel):
                         lr_scheduler=lr_scheduler,
                         backward_only=(batch_idx + 1) % acc_grad_iter != 0)
 
-        epoch_loss = epoch_lossC.detach().item() + epoch_lossD.detach().item() + epoch_lossT.detach().item()
-        #if 'labelD' in batch.keys():
-        #    epoch_lossD += lossD.detach().item()
+        epoch_loss = epoch_lossC.detach().item() #+ epoch_lossD.detach().item() + epoch_lossT.detach().item()
+        if loader.dataset._radi_displacement > 0:
+            epoch_loss += epoch_lossD.detach().item()
+        if loader.dataset._event_team:
+            epoch_loss += epoch_lossT.detach().item()
+        
         output = {'loss': epoch_loss / len(loader), 'lossC': epoch_lossC.detach().item() / len(loader)}
         if loader.dataset._radi_displacement > 0:
             output['lossD'] = epoch_lossD.detach().item() / len(loader)

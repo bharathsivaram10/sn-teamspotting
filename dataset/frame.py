@@ -129,7 +129,7 @@ class ActionSpotDataset(Dataset):
                         event_frame = int(int(event['position']) / 1000 * FPS_SN) #miliseconds to frames
                         label_idx = (event_frame - base_idx) // self._stride
 
-                        if self._radi_displacement > 0:
+                        if self._radi_displacement >= 0:
                             if (label_idx >= -self._radi_displacement and label_idx < self._clip_len + self._radi_displacement):
                                 label = event['label']
                                 if self._event_team:
@@ -140,7 +140,8 @@ class ActionSpotDataset(Dataset):
                                 label = self._class_dict[label]
                                 for i in range(max(0, label_idx - self._radi_displacement), min(self._clip_len, label_idx + self._radi_displacement + 1)):
                                     labels.append({'label': label, 'label_idx': i})
-                                    labelsD.append({'displ': i - label_idx, 'label_idx': i})
+                                    if self._radi_displacement > 0:
+                                        labelsD.append({'displ': i - label_idx, 'label_idx': i})
 
                 if frames_paths[1] != -1: #in case no frames were available
 

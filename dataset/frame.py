@@ -66,6 +66,9 @@ class ActionSpotDataset(Dataset):
         else:
             self._overlap = 1
         assert overlap >= 0 and overlap <= 1
+        if self._dataset == 'soccernet':
+            if self._overlap % 2 == 1:
+                self._overlap += 1 # To ensure that the overlap is even to ensure frames exist (extracted with stride 2)
         self._dataset_len = dataset_len
         assert dataset_len > 0
         self._pad_len = pad_len

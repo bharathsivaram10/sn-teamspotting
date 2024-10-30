@@ -38,6 +38,6 @@ Note that these dates are tentative and subject to changes if necessary.
  - **TBD:** Open evaluation server on the (Seggregated) Challenge set.
  - **TBD:** Close evaluation server.
  - **TBD:** Deadline for submitting the report.
- - **TBD:** A full-day workshop at CVPR 2025.
+ - **TBD:** Temptative full-day workshop at CVPR 2025.
 
 For any further doubt or concern, please raise an issue in that repository, or contact us directly on [Discord](https://discord.gg/SM8uHj9mkP).

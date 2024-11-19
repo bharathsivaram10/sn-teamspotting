@@ -1,16 +1,14 @@
 # Guidelines for the Team Ball Action Spotting challenge
 
-The 3rd [Ball Action Spotting Challenge]() will be held at the 
-official [CVSports Workshop](https://vap.aau.dk/cvsports/) at CVPR 2025! 
-Subscribe (watch) the repo to receive the latest info regarding timeline and prizes!
+Here we present the 3rd [Ball Action Spotting Challenge](). Subscribe (watch) the repo to receive the latest info regarding timeline and prizes!
 
 We propose the SoccerNet challenge to encourage the development of state-of-the-art algorithm for Generic Soccer Video Understanding.
  - **Ball Action Spotting**: Spot the actions related to the ball on a complete video of soccer game among 12 classes. In this third edition, methods are additionally required to identify the team performing the action (left or right).
 
-We provide evaluation servers for the team ball action spotting task. The evaluation server handles predictions for the open [**test**](https://www.codabench.org/competitions/4233/?secret_key=3943fc23-a8de-4e4f-a073-a1f25ac75b2c) sets and the segregated [**challenge**](https://www.codabench.org/competitions/4234/?secret_key=9569c83f-f910-4f28-bac6-f811a250befd) sets.
+We provide evaluation servers for the team ball action spotting task. The evaluation server handles predictions for the open [**test**](https://www.codabench.org/competitions/4418/) sets and the segregated [**challenge**](https://www.codabench.org/competitions/4417/) sets.
 
-Winners will be announced at CVSports Workshop at CVPR 2025. 
-Prizes will be announced soon, stay tuned!
+Winners will tentatively be announced at the CVSports Workshop at CVPR 2025.
+Prizes will be revealed soon, stay tuned!
 
 
 ## Who can participate / How to participate?

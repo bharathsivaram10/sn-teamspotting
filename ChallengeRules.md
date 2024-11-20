@@ -25,17 +25,17 @@ Prizes will be revealed soon, stay tuned!
 
  - For each task, the winner is the individual/team who reach the highest performance on the **challenge** set.
  - The metric taken into consideration is the **Team mAP@1 for Team Ball Action Spotting**.
- - The deadline to submit your results is TBD.
+ - The deadline to submit your results is April 24th.
  - In order to be eligible for the prize, we require the individual/team to provide a short report describing the details of the methodology (CVPR format, max 2 pages).
 
 ## Important dates
 
 Note that these dates are tentative and subject to changes if necessary.
 
- - **TBD:** Open evaluation server on the (Open) Test set.
- - **TBD:** Open evaluation server on the (Seggregated) Challenge set.
- - **TBD:** Close evaluation server.
- - **TBD:** Deadline for submitting the report.
- - **TBD:** Temptative full-day workshop at CVPR 2025.
+ - **November 20:** Open evaluation server on the (Open) Test set.
+ - **November 20:** Open evaluation server on the (Seggregated) Challenge set.
+ - **April 24:** Close evaluation server.
+ - **May 1:** Deadline for submitting the report.
+ - **TBD:** Tentative full-day workshop at CVPR 2025.
 
 For any further doubt or concern, please raise an issue in that repository, or contact us directly on [Discord](https://discord.gg/SM8uHj9mkP).

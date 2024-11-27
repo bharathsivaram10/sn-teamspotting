@@ -63,6 +63,8 @@ You can check [/util/eval.py](/util/eval.py) and [/util/score.py](/util/score.py
 
 Here, we present the results of the provided T-DEED baseline. Challenge yourself by pushing the limits of your methods and participating in our upcoming [2025 Challenges](https://www.soccer-net.org/challenges/2025). The official rules and submission guidelines can be found in [ChallengeRules.md](/ChallengeRules.md). You can submit your predictions to the Codabench evaluation server for both the [test](https://www.codabench.org/competitions/4418/) and [challenge](https://www.codabench.org/competitions/4417/) competitions.
 
+A checkpoint of the baseline is available at the following [link](https://drive.google.com/drive/folders/16IqSkctIGp76ZYKKvJvMB_ggHcQsessM?usp=sharing), allowing you to perform inference using the provided T-DEED model. Please note that results obtained with this checkpoint may differ slightly from the reported results due to variations in different training runs.
+
 ## Acknowledgments
 
 This repository is built upon the foundation of the [E2E-Spot](https://github.com/jhong93/spot) codebase, and we would like to extend our gratitude for their work.

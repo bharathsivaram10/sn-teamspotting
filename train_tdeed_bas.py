@@ -143,7 +143,10 @@ def main(args):
 
     #If joint_train -> 2 prediction heads
     if args.joint_train != None:
-        n_classes = [len(classes)//2+1, len(joint_train_classes)//2+1]
+        if args.event_team:
+            n_classes = [len(classes)//2+1, len(joint_train_classes)//2+1]
+        else:
+            n_classes = [len(classes)+1, len(joint_train_classes)+1]
         model._model.update_pred_head(n_classes)
         model._num_classes = np.array(n_classes).sum() 
 

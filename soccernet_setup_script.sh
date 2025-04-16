@@ -50,11 +50,15 @@ cd SoccerNet/SN-BAS-2025
 mkdir -p videos
 mv england_efl videos
 
-# Unzip labels
-cd ExtraLabelsActionSpotting500games
-unzip train_labels.zip
-unzip test_labels.zip
-unzip valid_labels.zip
+# Unzip extra labels
+if [ "$actionspot" == "true" ]; then
+    cd ExtraLabelsActionSpotting500games
+    unzip train_labels.zip
+    unzip test_labels.zip
+    unzip valid_labels.zip
+else
+    echo "Action spot is disabled, will not unzip extra labels"
+fi
 
 # Return to home directory before going to sn-teamspotting
 cd ~

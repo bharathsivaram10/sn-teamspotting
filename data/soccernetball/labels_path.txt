@@ -1,1 +1,1 @@
-/labels/path/snbas
+/home/ubuntu/SoccerNet/SN-BAS-2025/videos

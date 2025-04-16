@@ -1,6 +1,6 @@
 {
-    "frame_dir": "/home/ubuntu/SN-BAS-2025/",
-    "save_dir": "/path/to/save",
+    "frame_dir": "/home/ubuntu/frames_snb",
+    "save_dir": "/home/ubuntu/save_dir",
     "store_mode": "store",
     "batch_size": 4,
     "clip_len": 100,
@@ -24,9 +24,4 @@
     "only_test": false,
     "criterion": "map",
     "num_workers": 4
-    // "joint_train": {
-    //     "frame_dir": "/path/to/soccernet/frames",
-    //     "dataset": "soccernet",
-    //     "num_classes": 17
-    // }
 }

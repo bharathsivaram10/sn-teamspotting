@@ -177,6 +177,10 @@ def get_args():
     parser.add_argument('--optim', type=str, default="adamw_hf", required=False)
     parser.add_argument('--bf16', type=bool, default=True, required=False)
     parser.add_argument('--report_to', type=str, default="tensorboard", required=False)
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--model', type=str, required=True)
+    parser.add_argument('-ag', '--acc_grad_iter', type=int, default=1,
+                        help='Use gradient accumulation')
     return parser.parse_args()
 
 def main(args):

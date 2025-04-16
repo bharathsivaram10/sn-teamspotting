@@ -20,11 +20,7 @@ from dataset.frame import ActionSpotDataset, ActionSpotVideoDataset, ActionSpotD
 from util.io import load_json, store_json, load_text
 from dataset.datasets import get_datasets
 
-#!pip install -q accelerate datasets peft bitsandbytes tensorboard pyav num2words
-#!pip install -q git+https://github.com/huggingface/transformers.git
-#!pip install -q flash-attn --no-build-isolation
-
-#Constants
+# Constants
 STRIDE = 1
 STRIDE_SN = 12
 STRIDE_SNB = 2
@@ -66,8 +62,15 @@ def update_args(args, config):
         args.joint_train = None
     return args
 
-def collate_fn(examples):
-    pass
+def get_collate_fn(processor):
+    
+    image_token_id = processor.tokenizer.additional_special_tokens_ids[
+                processor.tokenizer.additional_special_tokens.index("<image>")]
+    
+    def collate_fn(examples):
+        pass
+
+    return collate_fn
 
 def get_trainer(args, model, train_ds, collate_fn):
 
@@ -86,8 +89,8 @@ def get_trainer(args, model, train_ds, collate_fn):
         save_total_limit=args.save_total_limit,
         optim=args.optim, # for 8-bit, keep paged_adamw_8bit, else adamw_hf
         bf16=args.bf16,
-        output_dir=f"./{model_name}-video-feedback",
-        hub_model_id=f"{model_name}-video-feedback",
+        output_dir=f"./{model_name}-sn-teamspotting",
+        hub_model_id=f"{model_name}-sn-teamspotting",
         remove_unused_columns=False,
         report_to=args.report_to,
         dataloader_pin_memory=False
@@ -204,6 +207,25 @@ def main(args):
         sys.exit('Datasets have correctly been stored! Stop training here and rerun with load mode.')
     else:
         print('Datasets have been loaded from previous versions correctly!')
+
+    for i in range(len(train_data)):
+        sample = train_data[i]
+        for key, value in sample.items():
+            print(key, value)
+            # if key in data_dict:
+            #     data_dict[key].append(value)
+            # else:
+            #     data_dict[key] = [value]
+
+    # model, processor = get_model_processor(args)
+
+    # train_ds_hf = get_hf_dataset(train_data)
+
+    # collate_fn = get_collate_fn(processor)
+
+    # trainer = get_trainer(args, model, train_data, collate_fn)
+
+    # trainer.train()
 
 if __name__ == '__main__':
     main(get_args())

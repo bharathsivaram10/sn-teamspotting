@@ -7,6 +7,7 @@ import wandb
 import sys
 from datasets import Features, Value, Sequence
 from datasets import Dataset as HFDataset
+from transformers.image_utils import load_image
 
 import torch
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
@@ -121,49 +122,50 @@ def get_collate_fn(processor):
     user_prompt = "Identify whether there was an action taken, and if so, what team, return in the format 'ACTION-team'. If no action is taken return 'None'"
     
     def collate_fn(examples):
-        if len(examples) == 0:
-            return {}
-
-        pixel_values = []
-        input_ids = []
-        attention_mask = []
-        labels = []
+    
+        texts = []
+        images = []
 
         for example in examples:
-            # Load the actual image from the path
-            # This assumes your frame_paths contains a path to an image
-            frame_path = example["frame_paths"]
-            # You'll need a function to load the image from path
-            image = load_image_from_path(frame_path)  # Implement this function
-            
-            # Process the image and text together
-            # Formatting depends on your specific processor/model requirements
-            inputs = processor(
-                text=f"{system_prompt}\n\n{user_prompt}",
-                images=image,
-                return_tensors="pt",
-                padding="max_length",
-                truncation=True
-            )
-            
-            pixel_values.append(inputs.pixel_values[0])
-            input_ids.append(inputs.input_ids[0])
-            attention_mask.append(inputs.attention_mask[0])
-            
-            # Assuming example["labels"] contains the ground truth label
-            if "labels" in example:
-                labels.append(example["labels"])
-        
-        # Create the batch
-        batch = {
-            "pixel_values": torch.stack(pixel_values),
-            "input_ids": torch.stack(input_ids),
-            "attention_mask": torch.stack(attention_mask),
-        }
-        
-        if labels:
-            batch["labels"] = torch.tensor(labels)
-            
+
+            image_path = os.path.join("visual-spatial-reasoning/images", example["frame_paths"])
+
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image not found: {image_path}")
+
+            image = load_image(image_path)
+
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            label = example["labels"]
+
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": f"{user_prompt}"}
+                    ]
+                },
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": label}
+                    ]
+                }
+            ]
+            text = processor.apply_chat_template(messages, add_generation_prompt=False)
+
+            texts.append(text.strip())
+            images.append([image])
+
+        batch = processor(text=texts, images=images, return_tensors="pt", padding=True)
+        labels = batch["input_ids"].clone()
+        labels[labels == processor.tokenizer.pad_token_id] = -100
+        labels[labels == image_token_id] = -100
+        batch["labels"] = labels
+
         return batch
         
     return collate_fn

@@ -308,21 +308,15 @@ def main(args):
     else:
         print('Datasets have been loaded from previous versions correctly!')
 
-    for i in range(len(train_data)):
-        sample = train_data[i]
-        for key, value in sample.items():
-            print(key, value)
-            # if key in data_dict:
-            #     data_dict[key].append(value)
-            # else:
-            #     data_dict[key] = [value]
+    # for i in range(len(train_data)):
+    #     sample = train_data[i]
+    #     for key, value in sample.items():
+    #         print(key, value)
 
     teamaction2label = load_classes("soccernetball/class.txt", event_team=True)
-    label2teamaction = {}
+    label2teamaction = {k:v for k,v in teamaction2label.items()}
 
-    for key,val in teamaction2label.items():
-
-        label2teamaction[val] = key
+    print(label2teamaction)
 
     # model, processor = get_model_processor(args)
 

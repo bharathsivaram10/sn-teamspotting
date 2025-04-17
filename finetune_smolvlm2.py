@@ -1,24 +1,25 @@
 #Standard imports
 import argparse
-import time
 import numpy as np
 import random
 from torch.utils.data import DataLoader
 import wandb
 import sys
+from datasets import Features, Value, Sequence
+from datasets import Dataset as HFDataset
 
 import torch
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoProcessor, BitsAndBytesConfig, AutoModelForImageTextToText
 import os
 
-from torch.nn.utils.rnn import pad_sequence
 from transformers import TrainingArguments, Trainer
 
 from util.dataset import load_classes
-from dataset.frame import ActionSpotDataset, ActionSpotVideoDataset, ActionSpotDatasetJoint
 from util.io import load_json, store_json, load_text
 from dataset.datasets import get_datasets
+
+actions = {"PASS", "DRIVE", "HEADER", "HIGH PASS", "OUT", "CROSS", "THROW IN", "SHOT", "BALL PLAYER BLOCK", "PLAYER SUCCESSFUL TACKLE", "FREE KICK", "GOAL"}
 
 # Constants
 STRIDE = 1
@@ -26,6 +27,40 @@ STRIDE_SN = 12
 STRIDE_SNB = 2
 OVERLAP = 0.9
 OVERLAP_SN = 0.50
+
+def convert_pytorch_to_hf_dataset(pytorch_dataset, label2teamaction):
+
+    data_dict = {"frame_paths" : [], "labels": []}
+
+    print("Converting PyTorch dataset to HuggingFace dataset...")
+
+    for i in range(min(len(pytorch_dataset), pytorch_dataset._dataset_len)):
+
+        # Get frame paths for this sample
+        frame_paths = pytorch_dataset._frame_paths[i]
+        data_dict["frame_paths"].append(frame_paths)
+
+        # Get labels for this sample
+        labels = pytorch_dataset._labels_store[i]
+        processed_labels = np.zeros(pytorch_dataset._clip_len, dtype=np.int64)
+        
+        for label_info in labels:
+            label_idx = label_info['label_idx']
+            if 0 <= label_idx < pytorch_dataset._clip_len:
+                processed_labels[label_idx] = label_info['label']
+        
+        data_dict["labels"].append(processed_labels)
+
+    # Define features for validation
+    features = Features({
+        "frame_paths": Sequence(Value("string")),  # List of frame paths
+        "labels": Sequence(Value("int64")),       # Labels for each frame
+    })
+
+    # Create the HuggingFace dataset
+    hf_dataset = HFDataset.from_dict(data_dict, features=features)
+    
+    return hf_dataset
 
 def update_args(args, config):
     #Update arguments with config file
@@ -64,12 +99,73 @@ def update_args(args, config):
 
 def get_collate_fn(processor):
     
+    # Get the image token ID for your processor
     image_token_id = processor.tokenizer.additional_special_tokens_ids[
                 processor.tokenizer.additional_special_tokens.index("<image>")]
     
-    def collate_fn(examples):
-        pass
+    system_prompt = '''You are a soccer video assistant, and your job is to identify key soccer actions. Here are the definitions for each action we are interested in:
+    Pass: A player kicks the ball to a teammate to maintain possession
+    Drive: An attacking dribble taken
+    Header: Striking the ball using the head, usually to pass, clear, or score
+    High Pass: A pass lofted through the air to reach a teammate over distance or defenders
+    Out: The ball goes completely over the touchline or goal line, stopping play
+    Cross: A pass from the side of the field into the opponent's penalty area
+    Throw In: A two-handed overhead throw used to return the ball into play after it goes out on the sideline
+    Shot: An attempt to score by kicking or heading the ball toward the goal
+    Ball Player Block: A player obstructs the ball or ball carrier to prevent progress
+    Player Successful Tackle: A player legally takes the ball away from an opponent
+    Free Kick: A kick awarded after a foul, allowing an unopposed restart
+    Goal: When the entire ball crosses the goal line between the posts and under the crossbar
+    None: None of the above actions'''
 
+    user_prompt = "Identify whether there was an action taken, and if so, what team, return in the format 'ACTION-team'. If no action is taken return 'None'"
+    
+    def collate_fn(examples):
+        if len(examples) == 0:
+            return {}
+
+        pixel_values = []
+        input_ids = []
+        attention_mask = []
+        labels = []
+
+        for example in examples:
+            # Load the actual image from the path
+            # This assumes your frame_paths contains a path to an image
+            frame_path = example["frame_paths"]
+            # You'll need a function to load the image from path
+            image = load_image_from_path(frame_path)  # Implement this function
+            
+            # Process the image and text together
+            # Formatting depends on your specific processor/model requirements
+            inputs = processor(
+                text=f"{system_prompt}\n\n{user_prompt}",
+                images=image,
+                return_tensors="pt",
+                padding="max_length",
+                truncation=True
+            )
+            
+            pixel_values.append(inputs.pixel_values[0])
+            input_ids.append(inputs.input_ids[0])
+            attention_mask.append(inputs.attention_mask[0])
+            
+            # Assuming example["labels"] contains the ground truth label
+            if "labels" in example:
+                labels.append(example["labels"])
+        
+        # Create the batch
+        batch = {
+            "pixel_values": torch.stack(pixel_values),
+            "input_ids": torch.stack(input_ids),
+            "attention_mask": torch.stack(attention_mask),
+        }
+        
+        if labels:
+            batch["labels"] = torch.tensor(labels)
+            
+        return batch
+        
     return collate_fn
 
 def get_trainer(args, model, train_ds, collate_fn):
@@ -220,6 +316,13 @@ def main(args):
             #     data_dict[key].append(value)
             # else:
             #     data_dict[key] = [value]
+
+    teamaction2label = load_classes("soccernetball/class.txt", event_team=True)
+    label2teamaction = {}
+
+    for key,val in teamaction2label.items():
+
+        label2teamaction[val] = key
 
     # model, processor = get_model_processor(args)
 

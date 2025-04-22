@@ -55,7 +55,7 @@ def convert_pytorch_to_hf_dataset(pytorch_dataset, label2teamaction):
     # Define features for validation
     features = Features({
         "frame_paths": Sequence(Value("string")),  # List of frame paths
-        "labels": Sequence(Value("int64")),       # Labels for each frame
+        "labels": Sequence(Value("string")),       # Labels for each frame
     })
 
     # Create the HuggingFace dataset
@@ -310,17 +310,18 @@ def main(args):
     else:
         print('Datasets have been loaded from previous versions correctly!')
 
-    # for i in range(len(train_data)):
-    #     sample = train_data[i]
-    #     for key, value in sample.items():
-    #         print(key, value)
+    for i in range(len(train_data)):
+        sample = train_data[i]
+        for key, value in sample.items():
+            print(key, value)
 
     teamaction2label = load_classes("soccernetball/class.txt", event_team=True)
     label2teamaction = {k:v for k,v in teamaction2label.items()}
 
     print(label2teamaction)
+    print(teamaction2label)
 
-    # model, processor = get_model_processor(args)
+    model, processor = get_model_processor(args)
 
     # train_ds_hf = get_hf_dataset(train_data)
 

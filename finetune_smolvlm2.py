@@ -317,13 +317,24 @@ def main(args):
 
     teamaction2label = load_classes("soccernetball/class.txt", event_team=True)
     label2teamaction = {k:v for k,v in teamaction2label.items()}
+    teamaction2label['NONE'] = 0
+    label2teamaction[0] = 'NONE'
 
     print(label2teamaction)
     print(teamaction2label)
 
+    for i in range(1):
+        sample = train_data[i]
+        for key, value in sample.items():
+            print(key, value)
+
+    framepath2label = train_data.get_paths_labels_dict()
+
+    print(len(framepath2label))
+
     # model, processor = get_model_processor(args)
 
-    train_ds_hf = convert_pytorch_to_hf_dataset(train_data, label2teamaction)
+    # train_ds_hf = convert_pytorch_to_hf_dataset(train_data, label2teamaction)
 
     # collate_fn = get_collate_fn(processor)
 

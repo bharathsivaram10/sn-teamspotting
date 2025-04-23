@@ -7,7 +7,7 @@ sudo apt install p7zip-full
 # git clone https://github.com/SoccerNet/sn-teamspotting.git
 
 # Setup virtual env
-python -m venv myenv
+python3 -m venv myenv
 source myenv/bin/activate
 
 # Install necessary packages
@@ -65,11 +65,11 @@ cd ~
 
 cd sn-teamspotting
 
-python extract_frames_snb.py --video_dir ~/SoccerNet/SN-BAS-2025/videos --out_dir ~/frames_snb --sample_fps 25 --num_workers 5
+python3 extract_frames_snb.py --video_dir ~/SoccerNet/SN-BAS-2025/videos --out_dir ~/frames_snb --sample_fps 25 --num_workers 5
 
 if [ "$actionspot" == "true" ]; then
     echo "Action spot is enabled, will proceed to extract frames"
-    python extract_frames_sn.py --video_dir ~/SoccerNet/SN-BAS-2025/ --out_dir ~/frames_sn --sample_fps 12.5 --num_workers 5
+    python3 extract_frames_sn.py --video_dir ~/SoccerNet/SN-BAS-2025/ --out_dir ~/frames_sn --sample_fps 12.5 --num_workers 5
 else
     echo "Action spot is disabled, will not extract frames"
 fi

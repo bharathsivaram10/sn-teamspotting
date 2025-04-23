@@ -254,7 +254,46 @@ class ActionSpotDataset(Dataset):
     def print_info(self):
         _print_info_helper(self._src_file, self._labels)
 
+    def get_paths_labels_dict(self):
+        # Get random index
+        framepath2label = {}
 
+        for idx in range(self._total_len):
+            #Get frame_path and labels dict
+            frames_path = self._frame_paths[idx]
+            dict_label = self._labels_store[idx]
+            # if self._radi_displacement > 0:
+            #     dict_labelD = self._labelsD_store[idx]
+
+            # Load frames
+            frame_paths = self._frame_reader.get_frame_paths(frames_path, pad=True, stride=self._stride)
+
+            # Process labels
+            labels = np.zeros(self._clip_len, np.int64)
+            if self._event_team:
+                labels_team = np.zeros(self._clip_len, np.int64) - 1
+            for label in dict_label:
+                if not self._event_team:
+                    labels[label['label_idx']] = label['label']
+                else:
+                    labels[label['label_idx']] = math.ceil(label['label'] / 2)
+                    if label['label'] != 0:
+                        if (self._dataset == 'soccernet') & (math.ceil(label['label'] / 2) == 9):
+                            labels_team[label['label_idx']] = -1 # -1 as it is not applicable
+                        else:
+                            labels_team[label['label_idx']] = (label['label']+1) % 2 # -1 if background, 0 if left, 1 if right
+
+            # data = {'frame': frames, 'contains_event': int(np.sum(labels) > 0), 'label': labels}
+
+            assert len(frame_paths) == len(labels)
+
+            for j in range(len(frame_paths)):
+                framepath2label[frame_paths[j]] = labels[j]
+
+            with open(self._store_dir + '/framepath2label.pkl', 'wb') as f:
+                pickle.dump(framepath2label, f) 
+
+            return framepath2label
 
 class FrameReader:
 
@@ -320,10 +359,26 @@ class FrameReader:
         # Always pad start, but only pad end if requested
         if pad_start > 0 or (pad and pad_end > 0):
             ret = torch.nn.functional.pad(
-                ret, (0, 0, 0, 0, 0, 0, pad_start, pad_end if pad else 0))            
+                ret, (0, 0, 0, 0, 0, 0, pad_start, pad_end if pad else 0))
 
         return ret
     
+    def get_frame_paths(self, paths, pad=False, stride=1):
+        base_path = paths[0]
+        start = paths[1]
+        pad_start = paths[2]
+        pad_end = paths[3]
+        ndigits = paths[4]
+        length = paths[5]
+        frame_paths = []
+
+        if ndigits == -1:
+            path = os.path.join(base_path, 'frame')
+
+        for i in range(length - pad_start - pad_end):
+            frame_paths.append(path + str(start + i * stride) + '.jpg')
+        
+        return frame_paths   
 
 class ActionSpotVideoDataset(Dataset):
 

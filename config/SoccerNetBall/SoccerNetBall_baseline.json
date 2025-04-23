@@ -1,5 +1,5 @@
 {
-    "frame_dir": "/home/ubuntu/frames_snb",
+    "frame_dir": "/home/ubuntu/frames_snb448",
     "save_dir": "/home/ubuntu/save_dir",
     "store_mode": "store",
     "batch_size": 4,

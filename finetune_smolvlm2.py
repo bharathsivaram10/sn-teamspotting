@@ -321,9 +321,9 @@ def main(args):
     print(label2teamaction)
     print(teamaction2label)
 
-    model, processor = get_model_processor(args)
+    # model, processor = get_model_processor(args)
 
-    # train_ds_hf = get_hf_dataset(train_data)
+    train_ds_hf = convert_pytorch_to_hf_dataset(train_data, label2teamaction)
 
     # collate_fn = get_collate_fn(processor)
 

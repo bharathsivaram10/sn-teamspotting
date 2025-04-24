@@ -16,6 +16,7 @@ import torchvision
 from tqdm import tqdm
 import pickle
 import math
+from tqdm import tqdm
 
 #Local imports
 
@@ -255,45 +256,67 @@ class ActionSpotDataset(Dataset):
         _print_info_helper(self._src_file, self._labels)
 
     def get_paths_labels_dict(self):
-        # Get random index
+        """
+        Creates a dictionary mapping frame paths to their corresponding labels
+        
+        Returns:
+            Dict: {frame_path: label}
+        """
         framepath2label = {}
-
-        for idx in range(self._total_len):
-            #Get frame_path and labels dict
+    
+        # Process each clip
+        for idx in tqdm(range(self._total_len)):
             frames_path = self._frame_paths[idx]
             dict_label = self._labels_store[idx]
-            # if self._radi_displacement > 0:
-            #     dict_labelD = self._labelsD_store[idx]
-
-            # Load frames
-            frame_paths = self._frame_reader.get_frame_paths(frames_path, pad=True, stride=self._stride)
-
-            # Process labels
-            labels = np.zeros(self._clip_len, np.int64)
-            if self._event_team:
-                labels_team = np.zeros(self._clip_len, np.int64) - 1
-            for label in dict_label:
-                if not self._event_team:
-                    labels[label['label_idx']] = label['label']
-                else:
-                    labels[label['label_idx']] = math.ceil(label['label'] / 2)
-                    if label['label'] != 0:
-                        if (self._dataset == 'soccernet') & (math.ceil(label['label'] / 2) == 9):
-                            labels_team[label['label_idx']] = -1 # -1 as it is not applicable
-                        else:
-                            labels_team[label['label_idx']] = (label['label']+1) % 2 # -1 if background, 0 if left, 1 if right
-
-            # data = {'frame': frames, 'contains_event': int(np.sum(labels) > 0), 'label': labels}
-
-            assert len(frame_paths) == len(labels)
-
-            for j in range(len(frame_paths)):
-                framepath2label[frame_paths[j]] = labels[j]
-
-            with open(self._store_dir + '/framepath2label.pkl', 'wb') as f:
-                pickle.dump(framepath2label, f) 
-
-            return framepath2label
+            
+            # Extract path information
+            base_path = frames_path[0]
+            start_frame = frames_path[1]
+            pad_start = frames_path[2]
+            pad_end = frames_path[3]
+            length = frames_path[5]
+            
+            # Skip if no valid start frame was found
+            if start_frame == -1:
+                continue
+            
+            # Calculate actual frame indices, skipping padding
+            actual_length = length - pad_start - pad_end
+            
+            # Create frame paths
+            frame_paths = []
+            if self._dataset == 'soccernet' or self._dataset == 'soccernetball':
+                for i in range(actual_length):
+                    frame_num = start_frame + i * self._stride
+                    frame_path = os.path.join(base_path, f"frame{frame_num}.jpg")
+                    # Only add if file exists
+                    if os.path.exists(frame_path):
+                        frame_paths.append((frame_path, pad_start + i))
+                        
+            # Map labels to frame paths
+            for frame_path, frame_idx in frame_paths:
+                # Default to background (0)
+                label = 0
+                
+                # Check if this frame has any labels
+                for label_item in dict_label:
+                    if label_item['label_idx'] == frame_idx:
+                        label = label_item['label']
+                        break
+                        
+                # Add to dictionary
+                framepath2label[frame_path] = label
+        
+        # Print statistics
+        print(f"Created mapping with {len(framepath2label)} frames")
+        
+        # Save dictionary
+        save_path = os.path.join(self._store_dir, 'framepath2label.pkl')
+        with open(save_path, 'wb') as f:
+            pickle.dump(framepath2label, f)
+        print(f"Saved mapping to {save_path}")
+        
+        return framepath2label
 
 class FrameReader:
 

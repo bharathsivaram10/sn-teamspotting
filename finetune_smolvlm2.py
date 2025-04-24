@@ -13,6 +13,7 @@ import torch
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoProcessor, BitsAndBytesConfig, AutoModelForImageTextToText
 import os
+from torch.nn.utils.rnn import pad_sequence
 
 from transformers import TrainingArguments, Trainer
 
@@ -29,35 +30,20 @@ STRIDE_SNB = 2
 OVERLAP = 0.9
 OVERLAP_SN = 0.50
 
-def convert_pytorch_to_hf_dataset(pytorch_dataset, label2teamaction):
-
-    data_dict = {"frame_paths" : [], "labels": []}
-
+def convert_pytorch_to_hf_dataset(framepath2label, label2teamaction):
+    data_dict = {"frame_path": [], "teamaction": []}
     print("Converting PyTorch dataset to HuggingFace dataset...")
-
-    for i in range(min(len(pytorch_dataset), pytorch_dataset._dataset_len)):
-
-        # Get frame paths for this sample
-        frame_paths = pytorch_dataset._frame_paths[i]
-        data_dict["frame_paths"].append(frame_paths)
-
-        # Get labels for this sample
-        labels = pytorch_dataset._labels_store[i]
-        processed_labels = np.zeros(pytorch_dataset._clip_len, dtype=np.int64)
+    
+    for frame_path, label in framepath2label.items():
+        data_dict['frame_path'].append(frame_path)
+        data_dict['teamaction'].append(label2teamaction[label])
         
-        for label_info in labels:
-            label_idx = label_info['label_idx']
-            if 0 <= label_idx < pytorch_dataset._clip_len:
-                processed_labels[label_idx] = label_info['label']
-        
-        data_dict["labels"].append(processed_labels)
-
-    # Define features for validation
+    # Define features correctly - these are individual values, not sequences
     features = Features({
-        "frame_paths": Sequence(Value("string")),  # List of frame paths
-        "labels": Sequence(Value("string")),       # Labels for each frame
+        "frame_path": Value("string"),  # Single frame path as string
+        "teamaction": Value("string"),  # Single label as string
     })
-
+    
     # Create the HuggingFace dataset
     hf_dataset = HFDataset.from_dict(data_dict, features=features)
     
@@ -119,16 +105,15 @@ def get_collate_fn(processor):
     Goal: When the entire ball crosses the goal line between the posts and under the crossbar
     None: None of the above actions'''
 
-    user_prompt = "Identify whether there was an action taken, and if so, what team, return in the format 'ACTION-team'. If no action is taken return 'None'"
-    
+    user_prompt = "Identify whether there was an action taken, and if so, what team (left or right). Return in the format 'ACTION-team'. If no action is taken return 'NONE'"
+   
     def collate_fn(examples):
     
         texts = []
         images = []
 
         for example in examples:
-
-            image_path = os.path.join("visual-spatial-reasoning/images", example["frame_paths"])
+            image_path = os.path.join("visual-spatial-reasoning/images", example["frame_path"])
 
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Image not found: {image_path}")
@@ -138,13 +123,18 @@ def get_collate_fn(processor):
             if image.mode != 'RGB':
                 image = image.convert('RGB')
 
-            label = example["labels"]
+            # Fix: Use the correct field name "teamaction" instead of "labels"
+            label = example["teamaction"]
 
             messages = [
                 {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
                     "role": "user",
                     "content": [
-                        {"type": "image"},
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg"}},
                         {"type": "text", "text": f"{user_prompt}"}
                     ]
                 },
@@ -158,8 +148,9 @@ def get_collate_fn(processor):
             text = processor.apply_chat_template(messages, add_generation_prompt=False)
 
             texts.append(text.strip())
-            images.append([image])
+            images.append(image)  # Fix: Don't wrap image in a list
 
+        # Fix: Pass images directly, not as a list of lists
         batch = processor(text=texts, images=images, return_tensors="pt", padding=True)
         labels = batch["input_ids"].clone()
         labels[labels == processor.tokenizer.pad_token_id] = -100
@@ -310,35 +301,22 @@ def main(args):
     else:
         print('Datasets have been loaded from previous versions correctly!')
 
-    for i in range(len(train_data)):
-        sample = train_data[i]
-        for key, value in sample.items():
-            print(key, value)
-
-    teamaction2label = load_classes("soccernetball/class.txt", event_team=True)
-    label2teamaction = {k:v for k,v in teamaction2label.items()}
+    teamaction2label = load_classes("data/soccernetball/class.txt", event_team=True)
+    label2teamaction = {v:k for k,v in teamaction2label.items()}
     teamaction2label['NONE'] = 0
     label2teamaction[0] = 'NONE'
 
-    print(label2teamaction)
-    print(teamaction2label)
-
-    for i in range(1):
-        sample = train_data[i]
-        for key, value in sample.items():
-            print(key, value)
-
     framepath2label = train_data.get_paths_labels_dict()
 
-    print(len(framepath2label))
+    train_ds_hf = convert_pytorch_to_hf_dataset(framepath2label, label2teamaction)
+
+    print(train_ds_hf)
 
     # model, processor = get_model_processor(args)
 
-    # train_ds_hf = convert_pytorch_to_hf_dataset(train_data, label2teamaction)
-
     # collate_fn = get_collate_fn(processor)
 
-    # trainer = get_trainer(args, model, train_data, collate_fn)
+    # trainer = get_trainer(args, model, train_ds_hf, collate_fn)
 
     # trainer.train()
 

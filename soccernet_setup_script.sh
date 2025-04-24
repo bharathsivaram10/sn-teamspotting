@@ -2,7 +2,7 @@
 
 actionspot=$1  # Get value from the first argument
 
-sudo apt install p7zip-full
+sudo apt install -y p7zip-full
 
 # git clone https://github.com/SoccerNet/sn-teamspotting.git
 
@@ -14,8 +14,8 @@ source myenv/bin/activate
 pip install -r sn-teamspotting/requirements.txt
 pip install huggingface_hub[cli]
 pip install SoccerNet --upgrade
-pip install -q transformers accelerate datasets peft bitsandbytes tensorboard pyav num2words
-pip install -q flash-attn --no-build-isolation
+pip install -q wheel transformers accelerate datasets peft bitsandbytes tensorboard pyav num2words
+pip install -q flash-attn 
 
 # Run Python script for data download
 python3 -c "

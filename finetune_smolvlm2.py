@@ -20,6 +20,7 @@ from transformers import TrainingArguments, Trainer
 from util.dataset import load_classes
 from util.io import load_json, store_json, load_text
 from dataset.datasets import get_datasets
+import pickle
 
 actions = {"PASS", "DRIVE", "HEADER", "HIGH PASS", "OUT", "CROSS", "THROW IN", "SHOT", "BALL PLAYER BLOCK", "PLAYER SUCCESSFUL TACKLE", "FREE KICK", "GOAL"}
 
@@ -91,42 +92,38 @@ def get_collate_fn(processor):
                 processor.tokenizer.additional_special_tokens.index("<image>")]
     
     system_prompt = '''You are a soccer video assistant, and your job is to identify key soccer actions. Here are the definitions for each action we are interested in:
-    Pass: A player kicks the ball to a teammate to maintain possession
-    Drive: An attacking dribble taken
-    Header: Striking the ball using the head, usually to pass, clear, or score
-    High Pass: A pass lofted through the air to reach a teammate over distance or defenders
-    Out: The ball goes completely over the touchline or goal line, stopping play
-    Cross: A pass from the side of the field into the opponent's penalty area
-    Throw In: A two-handed overhead throw used to return the ball into play after it goes out on the sideline
-    Shot: An attempt to score by kicking or heading the ball toward the goal
-    Ball Player Block: A player obstructs the ball or ball carrier to prevent progress
-    Player Successful Tackle: A player legally takes the ball away from an opponent
-    Free Kick: A kick awarded after a foul, allowing an unopposed restart
-    Goal: When the entire ball crosses the goal line between the posts and under the crossbar
-    None: None of the above actions'''
-
+    PASS: A player kicks the ball to a teammate to maintain possession
+    DRIVE: An attacking dribble taken
+    HEADER: Striking the ball using the head, usually to pass, clear, or score
+    HIGH PASS: A pass lofted through the air to reach a teammate over distance or defenders
+    OUT: The ball goes completely over the touchline or goal line, stopping play
+    CROSS: A pass from the side of the field into the opponent's penalty area
+    THROW IN: A two-handed overhead throw used to return the ball into play after it goes out on the sideline
+    SHOT: An attempt to score by kicking or heading the ball toward the goal
+    BALL PPLAYER BLOCK: A player obstructs the ball or ball carrier to prevent progress
+    PLAYER SUCCESSFUL TACKLE: A player legally takes the ball away from an opponent
+    FREE KICK: A kick awarded after a foul, allowing an unopposed restart
+    GOAL: When the entire ball crosses the goal line between the posts and under the crossbar
+    NONE: None of the above actions'''
     user_prompt = "Identify whether there was an action taken, and if so, what team (left or right). Return in the format 'ACTION-team'. If no action is taken return 'NONE'"
    
     def collate_fn(examples):
-    
         texts = []
         images = []
-
+        
         for example in examples:
-            image_path = os.path.join("visual-spatial-reasoning/images", example["frame_path"])
-
+            image_path = example["frame_path"]
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Image not found: {image_path}")
-
+            
             image = load_image(image_path)
-
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-
-            # Fix: Use the correct field name "teamaction" instead of "labels"
+                
             label = example["teamaction"]
-
-            messages = [
+            
+            # Process each example individually to avoid image count mismatch
+            single_messages = [
                 {
                     "role": "system",
                     "content": system_prompt
@@ -134,29 +131,34 @@ def get_collate_fn(processor):
                 {
                     "role": "user",
                     "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg"}},
+                        {"type": "image"},
                         {"type": "text", "text": f"{user_prompt}"}
                     ]
                 },
                 {
                     "role": "assistant",
-                    "content": [
-                        {"type": "text", "text": label}
-                    ]
+                    "content": label
                 }
             ]
-            text = processor.apply_chat_template(messages, add_generation_prompt=False)
-
+            
+            # Process one example at a time
+            text = processor.apply_chat_template(single_messages, add_generation_prompt=False)
             texts.append(text.strip())
-            images.append(image)  # Fix: Don't wrap image in a list
-
-        # Fix: Pass images directly, not as a list of lists
-        batch = processor(text=texts, images=images, return_tensors="pt", padding=True)
+            images.append(image)
+        
+        # Process the batch
+        batch = processor(
+            text=texts, 
+            images=images, 
+            return_tensors="pt", 
+            padding=True
+        )
+        
         labels = batch["input_ids"].clone()
         labels[labels == processor.tokenizer.pad_token_id] = -100
         labels[labels == image_token_id] = -100
         batch["labels"] = labels
-
+        
         return batch
         
     return collate_fn
@@ -263,7 +265,7 @@ def get_args():
     parser.add_argument('--save_strategy', type=str, default="steps", required=False)
     parser.add_argument('--save_steps', type=int, default=250, required=False)
     parser.add_argument('--save_total_limit', type=int, default=1, required=False)
-    parser.add_argument('--optim', type=str, default="adamw_hf", required=False)
+    parser.add_argument('--optim', type=str, default="adamw_torch", required=False)
     parser.add_argument('--bf16', type=bool, default=True, required=False)
     parser.add_argument('--report_to', type=str, default="tensorboard", required=False)
     parser.add_argument('--seed', type=int, default=1)
@@ -306,19 +308,26 @@ def main(args):
     teamaction2label['NONE'] = 0
     label2teamaction[0] = 'NONE'
 
-    framepath2label = train_data.get_paths_labels_dict()
+    load_from_pkl = True
+
+    if load_from_pkl:
+        with open('/home/ubuntu/save_dir/StoreClips/soccernetball/framepath2label.pkl', 'rb') as f:
+            framepath2label = pickle.load(f)
+    else:
+        framepath2label = train_data.get_paths_labels_dict()   
 
     train_ds_hf = convert_pytorch_to_hf_dataset(framepath2label, label2teamaction)
 
-    print(train_ds_hf)
+    for i in range(100):
+        print(train_ds_hf[i])    
 
-    # model, processor = get_model_processor(args)
+    model, processor = get_model_processor(args)
 
-    # collate_fn = get_collate_fn(processor)
+    collate_fn = get_collate_fn(processor)
 
-    # trainer = get_trainer(args, model, train_ds_hf, collate_fn)
+    trainer = get_trainer(args, model, train_ds_hf, collate_fn)
 
-    # trainer.train()
+    trainer.train()
 
 if __name__ == '__main__':
     main(get_args())

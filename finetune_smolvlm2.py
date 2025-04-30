@@ -273,7 +273,7 @@ def get_args():
     parser.add_argument('--report_to', type=str, default="wandb", required=False)
     parser.add_argument('--do_eval', type=bool, default=True, required=False)
     parser.add_argument('--eval_strategy', type=str, default="steps", required=False)
-    parser.add_argument('--eval_steps', type=int, default=250, required=False)
+    parser.add_argument('--eval_steps', type=int, default=10000, required=False)
     parser.add_argument('--load_from_pkl', type=bool, default=False, required=False)  
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--model', type=str, required=True)

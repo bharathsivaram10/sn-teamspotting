@@ -112,6 +112,7 @@ def get_collate_fn(processor):
         images = []
         
         for example in examples:
+            # Get and prepare the image
             image_path = example["frame_path"]
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Image not found: {image_path}")
@@ -119,41 +120,43 @@ def get_collate_fn(processor):
             image = load_image(image_path)
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-                
+            
             label = example["teamaction"]
             
-            # Process each example individually to avoid image count mismatch
-            single_messages = [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
+            # Create messages similar to your example format
+            messages = [
                 {
                     "role": "user",
                     "content": [
+                        {"type": "text", "text": system_prompt},
                         {"type": "image"},
-                        {"type": "text", "text": f"{user_prompt}"}
+                        {"type": "text", "text": user_prompt}
                     ]
                 },
                 {
                     "role": "assistant",
-                    "content": label
+                    "content": [
+                        {"type": "text", "text": label}
+                    ]
                 }
             ]
             
-            # Process one example at a time
-            text = processor.apply_chat_template(single_messages, add_generation_prompt=False)
+            # Process with apply_chat_template
+            text = processor.apply_chat_template(messages, add_generation_prompt=False)
             texts.append(text.strip())
-            images.append(image)
+            
+            # Important: Wrap the image in a list as shown in your example
+            images.append([image])
         
-        # Process the batch
+        # Process the batch with nested images list
         batch = processor(
-            text=texts, 
-            images=images, 
-            return_tensors="pt", 
+            text=texts,
+            images=images,  # This format matches your working example
+            return_tensors="pt",
             padding=True
         )
         
+        # Handle labels
         labels = batch["input_ids"].clone()
         labels[labels == processor.tokenizer.pad_token_id] = -100
         labels[labels == image_token_id] = -100
@@ -163,7 +166,7 @@ def get_collate_fn(processor):
         
     return collate_fn
 
-def get_trainer(args, model, train_ds, collate_fn):
+def get_trainer(args, model, train_ds, val_ds, collate_fn):
 
     model_name = args.model_id.split("/")[-1]
 
@@ -180,6 +183,9 @@ def get_trainer(args, model, train_ds, collate_fn):
         save_total_limit=args.save_total_limit,
         optim=args.optim, # for 8-bit, keep paged_adamw_8bit, else adamw_hf
         bf16=args.bf16,
+        do_eval=args.do_eval,
+        eval_strategy=args.eval_strategy,
+        eval_steps=args.eval_steps,
         output_dir=f"./{model_name}-sn-teamspotting",
         hub_model_id=f"{model_name}-sn-teamspotting",
         remove_unused_columns=False,
@@ -192,6 +198,7 @@ def get_trainer(args, model, train_ds, collate_fn):
     args=training_args,
     data_collator=collate_fn,
     train_dataset=train_ds,
+    eval_dataset=val_ds
     )
 
     return trainer
@@ -240,10 +247,6 @@ def get_model_processor(args):
             _attn_implementation="flash_attention_2",
         ).to("cuda")
 
-        # if you'd like to only fine-tune LLM
-        for param in model.model.vision_model.parameters():
-            param.requires_grad = False
-
     peak_mem = torch.cuda.max_memory_allocated()
     print(f"The model as is is holding: {peak_mem / 1024**3:.2f} of GPU RAM")
 
@@ -256,8 +259,8 @@ def get_args():
     parser.add_argument('--USE_QLORA', type=bool, default=False, required=False)
     parser.add_argument('--model_id', type=str, default="HuggingFaceTB/SmolVLM2-2.2B-Instruct", required=False)
     parser.add_argument('--num_train_epochs', type=int, default=1, required=False)
-    parser.add_argument('--per_device_train_batch_size', type=int, default=2, required=False)
-    parser.add_argument('--gradient_accumulation_steps', type=int, default=1, required=False)
+    parser.add_argument('--per_device_train_batch_size', type=int, default=4, required=False)
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=4, required=False)
     parser.add_argument('--warmup_steps', type=int, default=50, required=False)
     parser.add_argument('--learning_rate', type=float, default=1e-4, required=False)
     parser.add_argument('--weight_decay', type=float, default=0.01, required=False)
@@ -267,7 +270,11 @@ def get_args():
     parser.add_argument('--save_total_limit', type=int, default=1, required=False)
     parser.add_argument('--optim', type=str, default="adamw_torch", required=False)
     parser.add_argument('--bf16', type=bool, default=True, required=False)
-    parser.add_argument('--report_to', type=str, default="tensorboard", required=False)
+    parser.add_argument('--report_to', type=str, default="wandb", required=False)
+    parser.add_argument('--do_eval', type=bool, default=True, required=False)
+    parser.add_argument('--eval_strategy', type=str, default="steps", required=False)
+    parser.add_argument('--eval_steps', type=int, default=250, required=False)
+    parser.add_argument('--load_from_pkl', type=bool, default=False, required=False)  
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('-ag', '--acc_grad_iter', type=int, default=1,
@@ -308,24 +315,28 @@ def main(args):
     teamaction2label['NONE'] = 0
     label2teamaction[0] = 'NONE'
 
-    load_from_pkl = True
+    framepath2label = {}
 
-    if load_from_pkl:
-        with open('/home/ubuntu/save_dir/StoreClips/soccernetball/framepath2label.pkl', 'rb') as f:
-            framepath2label = pickle.load(f)
+    if args.load_from_pkl:
+        for dataset in ['train','val']:
+            if args.load_from_pkl:
+                with open(f'/home/ubuntu/save_dir/StoreClips/soccernetball/framepath2label_{dataset}.pkl', 'rb') as f:
+                    framepath2label[dataset] = pickle.load(f)
     else:
-        framepath2label = train_data.get_paths_labels_dict()   
+        framepath2label['train'] = train_data.get_paths_labels_dict('train')
+        framepath2label['val'] = val_data.get_paths_labels_dict('val')   
 
-    train_ds_hf = convert_pytorch_to_hf_dataset(framepath2label, label2teamaction)
+    train_ds_hf = convert_pytorch_to_hf_dataset(framepath2label['train'], label2teamaction)
+    val_ds_hf = convert_pytorch_to_hf_dataset(framepath2label['val'], label2teamaction)
 
-    for i in range(100):
-        print(train_ds_hf[i])    
+    # Randomly sample a few frames from each dataset, and write the data to a directory with annotations text file
+    # Mainly for visual inspection    
 
     model, processor = get_model_processor(args)
 
     collate_fn = get_collate_fn(processor)
 
-    trainer = get_trainer(args, model, train_ds_hf, collate_fn)
+    trainer = get_trainer(args, model, train_ds_hf, val_ds_hf, collate_fn)
 
     trainer.train()
 

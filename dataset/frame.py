@@ -255,7 +255,7 @@ class ActionSpotDataset(Dataset):
     def print_info(self):
         _print_info_helper(self._src_file, self._labels)
 
-    def get_paths_labels_dict(self):
+    def get_paths_labels_dict(self, dataset: str):
         """
         Creates a dictionary mapping frame paths to their corresponding labels
         
@@ -311,7 +311,7 @@ class ActionSpotDataset(Dataset):
         print(f"Created mapping with {len(framepath2label)} frames")
         
         # Save dictionary
-        save_path = os.path.join(self._store_dir, 'framepath2label.pkl')
+        save_path = os.path.join(self._store_dir, f'framepath2label_{dataset}.pkl')
         with open(save_path, 'wb') as f:
             pickle.dump(framepath2label, f)
         print(f"Saved mapping to {save_path}")

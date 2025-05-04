@@ -1,4 +1,3 @@
-#Standard imports
 import argparse
 import numpy as np
 import random
@@ -190,7 +189,9 @@ def get_trainer(args, model, train_ds, val_ds, collate_fn):
         hub_model_id=f"{model_name}-sn-teamspotting",
         remove_unused_columns=False,
         report_to=args.report_to,
-        dataloader_pin_memory=False
+        dataloader_pin_memory=False,
+        gradient_checkpointing=args.gradient_checkpointing,
+        load_best_model_at_end = args.load_best_model_at_end
     )
 
     trainer = Trainer(
@@ -260,13 +261,14 @@ def get_args():
     parser.add_argument('--model_id', type=str, default="HuggingFaceTB/SmolVLM2-2.2B-Instruct", required=False)
     parser.add_argument('--num_train_epochs', type=int, default=1, required=False)
     parser.add_argument('--per_device_train_batch_size', type=int, default=4, required=False)
-    parser.add_argument('--gradient_accumulation_steps', type=int, default=4, required=False)
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=8, required=False)
+    parser.add_argument('--gradient_checkpointing', type=bool, default=True, required=False)
     parser.add_argument('--warmup_steps', type=int, default=50, required=False)
     parser.add_argument('--learning_rate', type=float, default=1e-4, required=False)
     parser.add_argument('--weight_decay', type=float, default=0.01, required=False)
     parser.add_argument('--logging_steps', type=int, default=25, required=False)
     parser.add_argument('--save_strategy', type=str, default="steps", required=False)
-    parser.add_argument('--save_steps', type=int, default=250, required=False)
+    parser.add_argument('--save_steps', type=int, default=10000, required=False)
     parser.add_argument('--save_total_limit', type=int, default=1, required=False)
     parser.add_argument('--optim', type=str, default="adamw_torch", required=False)
     parser.add_argument('--bf16', type=bool, default=True, required=False)
@@ -274,11 +276,11 @@ def get_args():
     parser.add_argument('--do_eval', type=bool, default=True, required=False)
     parser.add_argument('--eval_strategy', type=str, default="steps", required=False)
     parser.add_argument('--eval_steps', type=int, default=10000, required=False)
-    parser.add_argument('--load_from_pkl', type=bool, default=False, required=False)  
+    parser.add_argument('--load_from_pkl', type=bool, default=False, required=False)
+    parser.add_argument('--load_best_model_at_end', type=bool, default=True, required=False)
+    parser.add_argument('--sample_data', type=bool, default=True, required=False)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--model', type=str, required=True)
-    parser.add_argument('-ag', '--acc_grad_iter', type=int, default=1,
-                        help='Use gradient accumulation')
     return parser.parse_args()
 
 def main(args):
@@ -298,7 +300,6 @@ def main(args):
         LABELS_SN_PATH = load_text(os.path.join('data', 'soccernet', 'labels_path.txt'))[0]
         LABELS_SNB_PATH = load_text(os.path.join('data', 'soccernetball', 'labels_path.txt'))[0]
 
-    assert args.batch_size % args.acc_grad_iter == 0
     if args.crop_dim <= 0:
         args.crop_dim = None
 
@@ -329,8 +330,37 @@ def main(args):
     train_ds_hf = convert_pytorch_to_hf_dataset(framepath2label['train'], label2teamaction)
     val_ds_hf = convert_pytorch_to_hf_dataset(framepath2label['val'], label2teamaction)
 
-    # Randomly sample a few frames from each dataset, and write the data to a directory with annotations text file
-    # Mainly for visual inspection    
+
+    if args.sample_data:
+        # Randomly sample 10 images and corresponding labels from hugging face dataset and save to folder to check:
+        # Sample 10 random indices
+        output_dir = "/home/ubuntu/sampled_images"
+        os.makedirs(output_dir, exist_ok=True)
+
+        label_file_path = os.path.join(output_dir, "labels.txt")
+
+        sample_indices = random.sample(range(len(train_ds_hf)), 10)
+
+        with open(label_file_path, "w") as f:
+            for i, idx in enumerate(sample_indices):
+                sample = train_ds_hf[idx]
+                image_path = sample["frame_path"]
+                label = sample["teamaction"]
+
+                # Save image
+                if not os.path.exists(image_path):
+                    raise FileNotFoundError(f"Image not found: {image_path}")
+                    
+                image = load_image(image_path)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+
+                save_path = os.path.join(output_dir, f"sample_{i}.jpg")
+                image.save(save_path)
+
+                f.write(f"sample_{i}.jpg: {label}\n")
+
+        sys.exit(f"Saved 10 images and labels to '{output_dir}'. Check the data and rerun with sample_data option off")
 
     model, processor = get_model_processor(args)
 

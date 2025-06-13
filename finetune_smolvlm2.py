@@ -90,20 +90,9 @@ def get_collate_fn(processor):
     image_token_id = processor.tokenizer.additional_special_tokens_ids[
                 processor.tokenizer.additional_special_tokens.index("<image>")]
     
-    system_prompt = '''You are a soccer video assistant, and your job is to identify key soccer actions. Here are the definitions for each action we are interested in:
-    PASS: A player kicks the ball to a teammate to maintain possession
-    DRIVE: An attacking dribble taken
-    HEADER: Striking the ball using the head, usually to pass, clear, or score
-    HIGH PASS: A pass lofted through the air to reach a teammate over distance or defenders
-    OUT: The ball goes completely over the touchline or goal line, stopping play
-    CROSS: A pass from the side of the field into the opponent's penalty area
-    THROW IN: A two-handed overhead throw used to return the ball into play after it goes out on the sideline
-    SHOT: An attempt to score by kicking or heading the ball toward the goal
-    BALL PPLAYER BLOCK: A player obstructs the ball or ball carrier to prevent progress
-    PLAYER SUCCESSFUL TACKLE: A player legally takes the ball away from an opponent
-    FREE KICK: A kick awarded after a foul, allowing an unopposed restart
-    GOAL: When the entire ball crosses the goal line between the posts and under the crossbar
-    NONE: None of the above actions'''
+    system_prompt = '''You are a soccer video assistant, and your job is to identify key soccer actions. Here are the list of possible actions: PASS, DRIVE
+    HEADER, HIGH PASS, OUT, CROSS, THROW IN, SHOT, BALL PLAYER BLOCK, PLAYER SUCCESSFUL TACKLE, FREE KICK, GOAL, NONE'''
+    
     user_prompt = "Identify whether there was an action taken, and if so, what team (left or right). Return in the format 'ACTION-team'. If no action is taken return 'NONE'"
    
     def collate_fn(examples):
@@ -191,7 +180,7 @@ def get_trainer(args, model, train_ds, val_ds, collate_fn):
         report_to=args.report_to,
         dataloader_pin_memory=False,
         gradient_checkpointing=args.gradient_checkpointing,
-        load_best_model_at_end = args.load_best_model_at_end
+        load_best_model_at_end = args.load_best_model_at_end,
     )
 
     trainer = Trainer(
@@ -208,9 +197,7 @@ def get_model_processor(args):
 
     model_id = args.model_id
 
-    processor = AutoProcessor.from_pretrained(
-    model_id
-    )
+    processor = AutoProcessor.from_pretrained(model_id)
 
     if args.USE_QLORA or args.USE_LORA:
         lora_config = LoraConfig(
@@ -233,6 +220,7 @@ def get_model_processor(args):
         model = AutoModelForImageTextToText.from_pretrained(
             model_id,
             quantization_config=bnb_config if args.USE_QLORA else None,
+            torch_dtype=torch.bfloat16,
             _attn_implementation="flash_attention_2",
             device_map="auto"
         )
@@ -260,7 +248,7 @@ def get_args():
     parser.add_argument('--USE_QLORA', type=bool, default=False, required=False)
     parser.add_argument('--model_id', type=str, default="HuggingFaceTB/SmolVLM2-2.2B-Instruct", required=False)
     parser.add_argument('--num_train_epochs', type=int, default=1, required=False)
-    parser.add_argument('--per_device_train_batch_size', type=int, default=4, required=False)
+    parser.add_argument('--per_device_train_batch_size', type=int, default=2, required=False)
     parser.add_argument('--gradient_accumulation_steps', type=int, default=8, required=False)
     parser.add_argument('--gradient_checkpointing', type=bool, default=True, required=False)
     parser.add_argument('--warmup_steps', type=int, default=50, required=False)
@@ -268,17 +256,18 @@ def get_args():
     parser.add_argument('--weight_decay', type=float, default=0.01, required=False)
     parser.add_argument('--logging_steps', type=int, default=25, required=False)
     parser.add_argument('--save_strategy', type=str, default="steps", required=False)
-    parser.add_argument('--save_steps', type=int, default=10000, required=False)
+    parser.add_argument('--save_steps', type=int, default=5000, required=False)
     parser.add_argument('--save_total_limit', type=int, default=1, required=False)
     parser.add_argument('--optim', type=str, default="adamw_torch", required=False)
     parser.add_argument('--bf16', type=bool, default=True, required=False)
+    parser.add_argument('--fp16', type=bool, default=False, required=False)
     parser.add_argument('--report_to', type=str, default="wandb", required=False)
     parser.add_argument('--do_eval', type=bool, default=True, required=False)
     parser.add_argument('--eval_strategy', type=str, default="steps", required=False)
-    parser.add_argument('--eval_steps', type=int, default=10000, required=False)
-    parser.add_argument('--load_from_pkl', type=bool, default=False, required=False)
+    parser.add_argument('--eval_steps', type=int, default=5000, required=False)
+    parser.add_argument('--load_from_pkl', type=bool, default=True, required=False)
     parser.add_argument('--load_best_model_at_end', type=bool, default=True, required=False)
-    parser.add_argument('--sample_data', type=bool, default=True, required=False)
+    parser.add_argument('--sample_data', type=bool, default=False, required=False)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--model', type=str, required=True)
     return parser.parse_args()

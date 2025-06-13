@@ -4,8 +4,6 @@ actionspot=$1  # Get value from the first argument
 
 sudo apt install -y p7zip-full
 
-# git clone https://github.com/SoccerNet/sn-teamspotting.git
-
 # Setup virtual env
 python3 -m venv myenv
 source myenv/bin/activate
@@ -14,8 +12,10 @@ source myenv/bin/activate
 pip install -r sn-teamspotting/requirements.txt
 pip install huggingface_hub[cli]
 pip install SoccerNet --upgrade
-pip install -q wheel transformers accelerate datasets peft bitsandbytes tensorboard pyav num2words
+pip install -q wheel transformers accelerate datasets peft bitsandbytes tensorboard av num2words ipywidgets tf-keras
 pip install -q flash-attn 
+pip install -q -U pillow jinja2
+pip install numpy==1.26.0
 
 # Run Python script for data download
 python3 -c "
